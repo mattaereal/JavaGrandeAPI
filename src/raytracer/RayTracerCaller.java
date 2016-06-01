@@ -1,19 +1,20 @@
 package raytracer;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
 
 import jgfutil.JGFInstrumentor;
 
 public class RayTracerCaller extends RayTracer implements Callable  {
 
     int id,height,width;
-    Barrier br;
+    CyclicBarrier cbr;
 
-    public RayTracerCaller(int id,int width,int height,Barrier br) {
+    public RayTracerCaller(int id,int width,int height, CyclicBarrier cbr) {
         this.id = id;
         this.width=width;
         this.height=height;
-        this.br=br;
+        this.cbr=cbr;
 
         JGFInstrumentor.startTimer("Section3:RayTracer:Init");
 
@@ -40,7 +41,7 @@ public class RayTracerCaller extends RayTracer implements Callable  {
 
 // synchronise threads and start timer
 
-        br.DoBarrier(id);
+        cbr.await();
         if(id == 0) JGFInstrumentor.startTimer("Section3:RayTracer:Run");
 
         render(interval);
@@ -55,7 +56,7 @@ public class RayTracerCaller extends RayTracer implements Callable  {
 
 // synchronise threads and stop timer
 
-        br.DoBarrier(id);
+        cbr.await();
         if(id == 0) JGFInstrumentor.stopTimer("Section3:RayTracer:Run");  
 
         System.out.println("Finishing: " + Thread.currentThread().getName());

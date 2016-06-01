@@ -29,7 +29,9 @@ package moldyn;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -66,7 +68,8 @@ public class md {
   }
 
 
-  public void runiters(){
+  @SuppressWarnings("unchecked")
+public void runiters(){
 
 /* Create new arrays */
 
@@ -81,12 +84,12 @@ public class md {
 
 /* spawn threads */
 
-    Barrier br = new TournamentBarrier(JGFMolDynBench.nthreads);
+    CyclicBarrier cbr =  new CyclicBarrier(JGFMolDynBench.nthreads);
     ExecutorService executor = Executors.newFixedThreadPool(JGFMolDynBench.nthreads);
     List<Callable<Object>> callables = new ArrayList<Callable<Object>>();
 
     for(int i=0 ; i < JGFMolDynBench.nthreads; i++) {
-      callables.add(new mdCaller(i,mm,sh_force,sh_force2,br));
+      callables.add(new mdCaller(i,mm,sh_force,sh_force2,cbr));
     }
 
     try {
@@ -133,20 +136,20 @@ class mdCaller implements Callable {
   int iprint = 10;
   int movemx = 50;
   
-  Barrier br;
+  CyclicBarrier cbr;
   random randnum;
 
   particle one [] = null;
 
-    public mdCaller(int id, int mm, double [][] sh_force, double [][][] sh_force2,Barrier br) {
+    public mdCaller(int id, int mm, double [][] sh_force, double [][][] sh_force2,CyclicBarrier cbr) {
      this.id=id;
      this.mm=mm;
      this.sh_force=sh_force;
      this.sh_force2=sh_force2;
-     this.br=br;
+     this.cbr=cbr;
     } 
 
-    public Object call() {
+    public Object call() throws InterruptedException, BrokenBarrierException {
 
     System.out.println("Starting: " + Thread.currentThread().getName());
 /* Parameter determination */
@@ -279,9 +282,9 @@ class mdCaller implements Callable {
 
 /* Synchronise threads and start timer before MD simulation */
 
-   br.DoBarrier(id);
+   cbr.await();
    if (id == 0) jgfutil.JGFInstrumentor.startTimer("Section3:MolDyn:Run");
-   br.DoBarrier(id);
+   cbr.await();
 
 
 /* MD simulation */
@@ -296,7 +299,7 @@ class mdCaller implements Callable {
     }
 
 /* Barrier */
-   br.DoBarrier(id);
+   cbr.await();
 
     if(id==0) {
      for(j=0;j<3;j++) {
@@ -311,7 +314,7 @@ class mdCaller implements Callable {
     md.interacts[id] = 0;
 
 /* Barrier */
-   br.DoBarrier(id);
+   cbr.await();
 
 
 
@@ -322,7 +325,7 @@ class mdCaller implements Callable {
     }
 
 /* Barrier */
-   br.DoBarrier(id);
+    cbr.await();
 
 /* update force arrays */
 
@@ -361,7 +364,7 @@ class mdCaller implements Callable {
    }
 
 /* Barrier */
-   br.DoBarrier(id);
+   cbr.await();
 
     if(id == 0) {
       for (j=0;j<3;j++) {
@@ -374,7 +377,7 @@ class mdCaller implements Callable {
     sum = 0.0;
 
 /* Barrier */
-   br.DoBarrier(id);
+   cbr.await();
 
 /*scale forces, update velocities */
 
@@ -419,11 +422,11 @@ class mdCaller implements Callable {
      rp = (count / mdsize) * 100.0;
     }
 
-   br.DoBarrier(id);
+   cbr.await();
    }
 
 
-   br.DoBarrier(id);
+   cbr.await();
    if (id == 0) JGFInstrumentor.stopTimer("Section3:MolDyn:Run");
    System.out.println("Finishing: " + Thread.currentThread().getName());
    return null;

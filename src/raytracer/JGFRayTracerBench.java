@@ -24,11 +24,13 @@ package raytracer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import jgfutil.*; 
+import jgfutil.*;
+import moldyn.JGFMolDynBench; 
 
 public class JGFRayTracerBench extends RayTracer implements JGFSection3 {
 
@@ -62,13 +64,12 @@ public class JGFRayTracerBench extends RayTracer implements JGFSection3 {
 public void JGFapplication(){ 
 
 
-      Barrier br = new TournamentBarrier(nthreads);
-      
+      CyclicBarrier cbr =  new CyclicBarrier(nthreads);
       ExecutorService executor = Executors.newFixedThreadPool(nthreads);
       List<Callable<Object>> callables = new ArrayList<Callable<Object>>();
       
       for(int i = 0; i < nthreads; i++) {
-          callables.add(new RayTracerCaller(i, width, height, br));
+          callables.add(new RayTracerCaller(i, width, height, cbr));
       }
       
       try {
